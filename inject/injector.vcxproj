@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B41F7D02-6C58-4A31-9E77-2D5A8C0F6C19}</ProjectGuid>
+    <RootNamespace>CarbonInject</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <!-- the payload section must survive linking untouched: no LTCG, no COMDAT folding,
+           no CFG thunks, and function-level linking off so it stays one self-contained blob -->
+      <ControlFlowGuard>false</ControlFlowGuard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <OptimizeReferences>false</OptimizeReferences>
+      <!-- Incremental linking inserts a table of `jmp` thunks in .text (an ILT) and resolves the
+           PAYLOAD SYMBOL TO THE THUNK rather than to its body in .cpl. The injector's invariant -
+           "the address of cc_payload must lie inside the .cpl section" - then fails, correctly:
+           copying .cpl would copy the real code while the entry point we computed would point at a
+           5-byte stub in the wrong section. Verified: introducing the Luau objects turned it on
+           (0x1400029cd: jmp 0x140116000), and it is off here for good. -->
+      <LinkIncremental>false</LinkIncremental>
+      <!-- The Luau compiler, prebuilt on this machine (third_party/luau-obj, see its README).
+           These objects record /FAILIFMISMATCH:RuntimeLibrary=MD_DynamicRelease, so this project
+           must stay /MD in Release; that is the MSVC default here. Listed one by one because
+           link.exe does not expand wildcards. The payload's .cpl section is unaffected by any of
+           this: it is extracted as bytes and never links against them. -->
+      <AdditionalDependencies>$(ProjectDir)..\third_party\luau-obj\Allocator.obj;$(ProjectDir)..\third_party\luau-obj\Ast.obj;$(ProjectDir)..\third_party\luau-obj\BuiltinFolding.obj;$(ProjectDir)..\third_party\luau-obj\Builtins.obj;$(ProjectDir)..\third_party\luau-obj\BytecodeBuilder.obj;$(ProjectDir)..\third_party\luau-obj\BytecodeWire.obj;$(ProjectDir)..\third_party\luau-obj\Compiler.obj;$(ProjectDir)..\third_party\luau-obj\Confusables.obj;$(ProjectDir)..\third_party\luau-obj\ConstantFolding.obj;$(ProjectDir)..\third_party\luau-obj\CostModel.obj;$(ProjectDir)..\third_party\luau-obj\Cst.obj;$(ProjectDir)..\third_party\luau-obj\Lexer.obj;$(ProjectDir)..\third_party\luau-obj\Location.obj;$(ProjectDir)..\third_party\luau-obj\Parser.obj;$(ProjectDir)..\third_party\luau-obj\PrettyPrinter.obj;$(ProjectDir)..\third_party\luau-obj\StringUtils.obj;$(ProjectDir)..\third_party\luau-obj\TableShape.obj;$(ProjectDir)..\third_party\luau-obj\TimeTrace.obj;$(ProjectDir)..\third_party\luau-obj\Types.obj;$(ProjectDir)..\third_party\luau-obj\ValueTracking.obj;$(ProjectDir)..\third_party\luau-obj\lcode.obj;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Optimization>MaxSpeed</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="injector.cpp" />
+    <ClCompile Include="gui.cpp" />
+    <!-- the compile half of the engine: links the prebuilt Luau compiler objects. Not part of the
+         payload - it runs in this process and only its output bytes cross into the target. -->
+    <ClCompile Include="luau_bridge.cpp" />
+    <!-- payload.cpp is compiled freestanding: no /GS cookie, no RTTI, no exceptions, no
+         intrinsics, no optimisation that could synthesise a call to memcpy/__chkstk, and no
+         function-level linking, so .cpl stays one self-contained blob that cannot be split or
+         folded, and nothing in it can reach for an address outside itself. -->
+    <ClCompile Include="payload.cpp">
+      <Optimization>Disabled</Optimization>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <ControlFlowGuard>false</ControlFlowGuard>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <ExceptionHandling>false</ExceptionHandling>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="payload.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

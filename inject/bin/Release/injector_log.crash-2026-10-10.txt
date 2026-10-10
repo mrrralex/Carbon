@@ -1,0 +1,107 @@
+--- self-test: the exact bytes that would be injected, executed here first ---
+  case 1 (our own image, expect BAD_SCHEDULER) : done=yes status=3 ok
+  case 2 (null image, expect BAD_IMAGE)       : done=yes status=2 ok
+  case 3 (bad marker, expect refusal)         : done=no ok
+  case 4 (second dispatch is a no-op)         : status=1234 ok
+  case 5: synthetic image at 0x20003dc0000 (139 MB committed, top rva 0x8bcfd50)
+  case 5 (synthetic target, full coverage)    : status=0 sched=ok job=ok offset=0xf78 L=ok routes=agree flags=1/0/1 gated=0 oob=0 ok
+  case 5b    (exec address outside the image  ): audit=0 exec=3 expect=3 arg1=- ok
+  case 5c    (exec bytecode the gate rejects  ): audit=0 exec=3 expect=3 arg1=- ok
+  case 5d    (exec with no validated state    ): audit=5 exec=4 expect=4 arg1=- ok
+  case 5e    (exec whose ARG1 cannot be dereferenced): audit=0 exec=7 expect=7 arg1=- ok
+  case 5f    (dry run, ARG1 shaped the way the loader reads it): audit=0 exec=6 expect=6 arg1=ok ok
+  case 5g    (container ARG2 std::string, no call) : exec=6 expect=6 data=ok size=14 cap=16 ok
+  case 6 (black box records, hands the fault on): in_cpl=yes installed=1 rv=0 magic=ok rip=ok va=ok regs=ok handed_on=ok ok
+  case 6b (a faulted CALL is recovered)       : rv=-1 rip=ok rsp=ok rax=ok resumed=ok client_kept=ok ok
+       diagnostic                 : stage_seen=1 fault_rva=4 magic=ok why=4 (recovered) walked=24 rsp=0xec52bfe9a0 ret=0xec52bfea50
+  case 6c (a null-call fault on OUR thread)   : rv=-1 ours=ok rip=ok rax=ok fault_rva=0 why=4 ok
+  self-test: PASSED
+
+--- target ---
+  pid            : 16176
+  image          : C:\Users\sargs\AppData\Local\Roblox\Versions\version-cec3ad5889b447cf\RobloxPlayerBeta.exe
+  base / kernel32: 0x7ff60b3c0000 / 0x7ffbae6c0000
+  image size     : 0x9127000
+  entry          : symbol is a thunk - followed it
+  payload        : 13716 bytes at .cpl, entry 0x7ff650c4c000 (+0x0 into the section)
+  recorder       : armed - handler 0x16d9bb20900 (rva 0x7ff650c4c900), trampoline 0x16d9bb50000, record 0x16d9bb40000
+  placed         : payload @0x16d9bb20000 (RX), ctx @0x16d9bb30000 (RW) - both freed on the way out
+  delivery       : 12 APC(s) queued across 180 thread(s) - no CreateRemoteThread, no module
+  restore        : NtContinue         target 0x7ffbb0841610  HOOKED   (ours 4c 8b d1 b8 / theirs e9 81 f5 e8)
+  restore        : RtlRestoreContext  target 0x7ffbb07859f0  clean   (ours 48 89 5c 24 / theirs 48 89 5c 24)
+  hijack         : stub 0x16d9bb60000 (46 bytes), saved context 0x16d9bb70000, NtContinue 0x7ffbb07859f0
+  hijack         : thread 4232   busy +937500   rip 0x7ff610f1e65a  inside the client image - running game/VM code
+                   redirected from rip 0x7ffbb0841544 rsp 0x5ef4ffb418 - the payload will report
+  hijack         : thread 23064  busy +468750   rip 0x7ffbb0840e44  inside ntdll - a wait
+  hijack         : thread 11300  busy +312500   rip 0x7ff60ea95311  inside the client image - running game/VM code
+                   could not take that one
+  hijack         : thread 19100  busy +312500   rip 0x7ffbb0844a14  inside ntdll - a wait
+  hijack         : thread 8620   busy +312500   rip 0x7ff60e8d6846  inside the client image - running game/VM code
+                   could not take that one
+  hijack         : thread 10296  busy +312500   rip 0x7ffbb0844a14  inside ntdll - a wait
+  hijack         : thread 9844   busy +156250   rip 0x7ffbb0844a14  inside ntdll - a wait
+  hijack         : round 1 delivered nothing (redirects swallowed by a kernel
+                   transition are invisible) - resampling threads
+FAIL: no busy threads found to hijack
+  waiting up to 5000 ms for a dispatch (an APC runs when its thread next enters an
+  alertable wait; game threads do that constantly)
+  the target exited while we waited (code 3221225477)
+  black box      : armed, but no fault was ever recorded. Either the death was not
+                   a first-chance exception on a thread we redirected, or the
+                   recorder was never installed (see the 'recorder:' line above).
+
+  no dispatch within the window: the APC(s) are still queued.
+  This is not a failure of the payload - it means no thread reached an alertable wait
+  while we were watching. Leaving both allocations mapped (a queued APC must keep a
+  valid target); re-run with --watch <ms> or run it while a game is actually loaded.
+--- self-test: the exact bytes that would be injected, executed here first ---
+  case 1 (our own image, expect BAD_SCHEDULER) : done=yes status=3 ok
+  case 2 (null image, expect BAD_IMAGE)       : done=yes status=2 ok
+  case 3 (bad marker, expect refusal)         : done=no ok
+  case 4 (second dispatch is a no-op)         : status=1234 ok
+  case 5: synthetic image at 0x20003dc0000 (139 MB committed, top rva 0x8bcfd50)
+  case 5 (synthetic target, full coverage)    : status=0 sched=ok job=ok offset=0xf78 L=ok routes=agree flags=1/0/1 gated=0 oob=0 ok
+  case 5b    (exec address outside the image  ): audit=0 exec=3 expect=3 arg1=- ok
+  case 5c    (exec bytecode the gate rejects  ): audit=0 exec=3 expect=3 arg1=- ok
+  case 5d    (exec with no validated state    ): audit=5 exec=4 expect=4 arg1=- ok
+  case 5e    (exec whose ARG1 cannot be dereferenced): audit=0 exec=7 expect=7 arg1=- ok
+  case 5f    (dry run, ARG1 shaped the way the loader reads it): audit=0 exec=6 expect=6 arg1=ok ok
+  case 5g    (container ARG2 std::string, no call) : exec=6 expect=6 data=ok size=14 cap=16 ok
+  case 6 (black box records, hands the fault on): in_cpl=yes installed=1 rv=0 magic=ok rip=ok va=ok regs=ok handed_on=ok ok
+  case 6b (a faulted CALL is recovered)       : rv=-1 rip=ok rsp=ok rax=ok resumed=ok client_kept=ok ok
+       diagnostic                 : stage_seen=1 fault_rva=4 magic=ok why=4 (recovered) walked=24 rsp=0xec52dfe840 ret=0xec52dfe8f0
+  case 6c (a null-call fault on OUR thread)   : rv=-1 ours=ok rip=ok rax=ok fault_rva=0 why=4 ok
+  self-test: PASSED
+
+--- target ---
+  pid            : 13784
+  image          : C:\Users\sargs\AppData\Local\Roblox\Versions\version-cec3ad5889b447cf\RobloxPlayerBeta.exe
+  base / kernel32: 0x7ff60b3c0000 / 0x7ffbae6c0000
+  image size     : 0x9127000
+  entry          : symbol is a thunk - followed it
+  payload        : 13716 bytes at .cpl, entry 0x7ff650c4c000 (+0x0 into the section)
+  recorder       : armed - handler 0x19df3ac0900 (rva 0x7ff650c4c900), trampoline 0x19df3af0000, record 0x19df3ae0000
+  placed         : payload @0x19df3ac0000 (RX), ctx @0x19df3ad0000 (RW) - both freed on the way out
+  delivery       : 12 APC(s) queued across 115 thread(s) - no CreateRemoteThread, no module
+  restore        : NtContinue         target 0x7ffbb0841610  HOOKED   (ours 4c 8b d1 b8 / theirs e9 81 f5 e8)
+  restore        : RtlRestoreContext  target 0x7ffbb07859f0  clean   (ours 48 89 5c 24 / theirs 48 89 5c 24)
+  hijack         : stub 0x19df3b00000 (46 bytes), saved context 0x19df3b10000, NtContinue 0x7ffbb07859f0
+  hijack         : thread 15096  busy +937500   rip 0x7ffb2e8172d9  elsewhere
+  hijack         : thread 7968   busy +781250   rip 0x7ff610f4a6d9  inside the client image - running game/VM code
+                   redirected from rip 0x7ffbb0844a14 rsp 0x320b7fe038 - the payload will report
+  hijack         : thread 8056   busy +156250   rip 0x7ffbb0844a14  inside ntdll - a wait
+  hijack         : thread 22800  busy +156250   rip 0x7ffbadb15f44  elsewhere
+  hijack         : thread 19008  busy +156250   rip 0x7ffbb0844a14  inside ntdll - a wait
+  hijack         : round 1 delivered nothing (redirects swallowed by a kernel
+                   transition are invisible) - resampling threads
+FAIL: no busy threads found to hijack
+  waiting up to 5000 ms for a dispatch (an APC runs when its thread next enters an
+  alertable wait; game threads do that constantly)
+  black box      : armed, but no fault was ever recorded. Either the death was not
+                   a first-chance exception on a thread we redirected, or the
+                   recorder was never installed (see the 'recorder:' line above).
+
+  no dispatch within the window: the APC(s) are still queued.
+  This is not a failure of the payload - it means no thread reached an alertable wait
+  while we were watching. Leaving both allocations mapped (a queued APC must keep a
+  valid target); re-run with --watch <ms> or run it while a game is actually loaded.

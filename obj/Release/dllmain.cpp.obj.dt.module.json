@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "C:\\Users\\sargs\\source\\repos\\Carbon\\obj\\Release\\dllmain.obj",
+            "outputs": [
+                "C:\\Users\\sargs\\source\\repos\\Carbon\\obj\\Release\\dllmain.cpp.obj.dt.module.json",
+                "C:\\Users\\sargs\\source\\repos\\Carbon\\obj\\Release\\dllmain.cpp.obj.dt.d.json"
+            ],
+            "requires": []
+        }
+    ]
+}
